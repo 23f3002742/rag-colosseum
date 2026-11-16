@@ -1,0 +1,10 @@
+1. Extract rag_colosseum_vercel.zip.
+2. Open a terminal in the extracted folder containing app.py.
+3. Run: npm install -g vercel
+4. Run: vercel login
+5. Run: vercel
+6. Run: vercel --prod
+7. Test: https://YOUR-PROJECT.vercel.app/health
+8. Test: python smoke_test.py https://YOUR-PROJECT.vercel.app
+9. Submit only https://YOUR-PROJECT.vercel.app as the Public Base URL.
+Keep the 8-second exam request limit in mind; vercel.json's maxDuration does not change that grader deadline.

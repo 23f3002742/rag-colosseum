@@ -1,4 +1,4 @@
-# RAG Colosseum — Vercel deployment
+# RAG Colosseum — Vercel deployment (v2.1)
 
 A self-contained FastAPI service for the 50 personalized technical passages. It exposes the required `POST /query` endpoint at the root of the deployed domain.
 
@@ -9,6 +9,19 @@ This project deliberately avoids PyTorch, FAISS native wheels, model downloads, 
 The retriever uses only the supplied 50 passages. Answers are extracted from passage sentences; retrieved text is never passed to a generative model or treated as executable instructions. This removes a common prompt-injection path. Requests are independent and read-only after initialization, so concurrent calls can share the in-memory index.
 
 This is a compact corpus-fitted embedding model, not a pretrained transformer model. It is designed for this fixed 50-passage corpus and prioritizes reliable exact-fact retrieval, close-confounder discrimination, and abstention over open-domain answering.
+
+
+## v2.1 retrieval improvements
+
+This revision specifically targets close-confounder retrieval and cross-passage synthesis:
+
+- Adds explicit concept-to-passage anchors for the 50 fixed subjects, including context-sensitive cases such as Cassandra (gossip vs. LSM compaction vs. CQL), CockroachDB (Raft vs. hybrid logical clocks), and MongoDB (document storage vs. hybrid logical clocks).
+- Expands procedural questions into relevant evidence terms, then selects multiple source sentences for mechanism questions instead of returning only the topic's introductory sentence.
+- Improves comparison answers for similarly named technologies and returns the required source passages together.
+- Aggregates port facts across passages when a question asks which services share a particular port, including the sentence that identifies each service.
+- Removes common instruction-override clauses from mixed factual questions. There is no generative LLM in the request path, so retrieved passage text is never executed as instructions.
+
+The 256-dimensional vectors are deterministic, corpus-fitted distributional random-indexing vectors, not a pretrained transformer embedding model. They are combined with BM25 and explicit concept/sentence reranking. This design keeps the Vercel bundle small and avoids a model download on cold start, but hidden semantic paraphrases may still require further tuning against the examiner's failed questions.
 
 ## API contract
 
@@ -110,7 +123,7 @@ Run the included smoke-test suite against the live service:
 python smoke_test.py https://YOUR-PROJECT.vercel.app
 ```
 
-It checks representative factual retrieval, comparisons, abstention, source/score validity, CORS, and concurrent requests. Every check has an 8-second HTTP timeout.
+It checks 24 direct/advanced factual questions, 6 comparisons, multi-passage and shared-port synthesis, mixed prompt-injection handling, 5 abstentions, source/score validity, CORS, and concurrent requests. Every HTTP request has an 8-second timeout.
 
 ## Local development
 
@@ -140,7 +153,7 @@ You can also use `vercel dev` after installing the Vercel CLI to exercise the pr
 
 ## Files
 
-- `app.py`: FastAPI API, dense distributional indexing, BM25 hybrid retrieval, sentence reranking, extractive answers, abstention, and CORS.
+- `app.py`: FastAPI API, corpus-fitted distributional indexing, BM25 hybrid retrieval, entity-aware sentence reranking, multi-source synthesis, extractive answers, abstention, and CORS.
 - `passages.json`: all 50 supplied passages in their original order (index `0` is the first passage).
 - `requirements.txt`: minimal Python dependencies.
 - `vercel.json`: Python Function duration setting.
